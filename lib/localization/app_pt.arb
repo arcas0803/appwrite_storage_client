@@ -1,0 +1,12 @@
+
+
+{
+    "@@locale": "pt",
+    "noPermissionFailure": "Não há permissão para realizar esta ação",
+    "uploadFileFailure": "Erro ao carregar o arquivo. Por favor, tente novamente mais tarde",
+    "removeFileFailure": "Erro ao excluir o arquivo. Por favor, tente novamente mais tarde",
+    "updateFileFailure": "Erro ao atualizar o arquivo. Por favor, tente novamente mais tarde",
+    "invalidUrlFile": "A URL do arquivo não é válida",
+    "serverFailure": "Erro no servidor. Por favor, tente novamente mais tarde"
+    
+}

@@ -1,0 +1,36 @@
+name: appwrite_storage_client
+description: "A new Flutter package project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+version: 0.0.1
+homepage:
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  appwrite: ^11.0.1
+  common_classes:
+    git:
+      url: https://github.com/arcas0803/common_classes.git
+      ref: main
+  connectivity_client:
+    git:
+      url: https://github.com/arcas0803/connectivity_client.git
+      ref: main
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.18.1
+  logger: ^2.0.2+1
+  url_launcher: ^6.2.2
+  uuid: ^4.2.0
+
+dev_dependencies:
+  flutter_lints: ^2.0.0
+  flutter_test:
+    sdk: flutter
+
+
+flutter:

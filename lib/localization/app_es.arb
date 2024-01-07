@@ -1,0 +1,10 @@
+{
+    "@@locale": "es",
+    "noPermissionFailure": "No tienes permiso para realizar esta acción",
+    "uploadFileFailure": "Error al subir el archivo. Por favor, inténtelo de nuevo más tarde",
+    "removeFileFailure": "Error al eliminar el archivo. Por favor, inténtelo de nuevo más tarde",
+    "updateFileFailure": "Error al actualizar el archivo. Por favor, inténtelo de nuevo más tarde",
+    "invalidUrlFile": "La URL del archivo no es válida",
+    "serverFailure": "Error del servidor. Por favor, inténtelo de nuevo más tarde"
+    
+}

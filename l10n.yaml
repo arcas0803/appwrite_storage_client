@@ -1,0 +1,9 @@
+template-arb-file: app_es.arb
+arb-dir: lib/localization
+output-dir: lib/localization
+output-localization-file: appwrite_storage_localizations.dart
+output-class: AppwriteStorageLocalizations
+preferred-supported-locales: [es]
+use-deferred-loading: false
+synthetic-package: false
+nullable-getters: true
