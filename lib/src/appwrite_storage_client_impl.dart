@@ -169,14 +169,12 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
           fileId: fileId,
         );
 
-        final compressPath = (compressResult as Success<String>).value;
-
         final result = await compute(
           _uploadImage,
           UploadImageParams(
             bucketId: _bucketId,
             fileId: fileId,
-            path: compressPath,
+            path: compressResult,
           ),
         );
 
