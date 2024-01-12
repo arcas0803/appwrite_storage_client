@@ -67,12 +67,20 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     _logger?.d('Compressing image with id: $fileId');
 
     try {
+      // Divide la ruta original en directorios
+      List<String> pathSegments = path.split('/');
+
+      // Reemplaza el último elemento (nombre del archivo original) con el nuevo nombre del archivo
+      pathSegments[pathSegments.length - 1] = '$fileId.jpg';
+
+      // Une los segmentos de la ruta de nuevo en una sola cadena
+      String newPath = pathSegments.join('/');
+
       var result = await FlutterImageCompress.compressAndGetFile(
         path,
-        '$fileId.jpg',
+        newPath,
         quality: 80,
-        minWidth: 1280,
-        minHeight: 720,
+        format: CompressFormat.jpeg,
       );
 
       if (result == null) {
@@ -103,7 +111,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       _telemetryOnSuccess?.call();
 
       return Result.success(
-        '$fileId.jpg',
+        result.path,
       );
     } catch (e, s) {
       final failure = ImageCompressionFailure(
