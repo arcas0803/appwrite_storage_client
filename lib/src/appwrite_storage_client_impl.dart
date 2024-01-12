@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart';
 import 'package:appwrite_storage_client/src/appwrite_storage_client.dart';
 import 'package:appwrite_storage_client/src/appwrite_storage_failure.dart';
 import 'package:appwrite_storage_client/src/preview_output_format.dart';
+import 'package:appwrite_storage_client/src/utils.dart';
 import 'package:common_classes/common_classes.dart';
 import 'package:connectivity_client/connectivity_client.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image/image.dart' as img;
 import 'package:logger/logger.dart';
 
 /// Implementation of [AppwriteStorageClient] that uses [appwrite] to communicate with
@@ -41,10 +45,106 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         _storage = storage,
         _bucketId = bucketId;
 
+  Result<void> _isImage({required String path}) {
+    _logger?.d('Checking if file is image with path: $path');
+
+    final extension = (path.split('.')..removeAt(0)).join('.');
+    final isCompatible = ['jpg', 'jpeg', 'png', 'webp', 'heic']
+        .contains(extension.toLowerCase());
+
+    if (isCompatible == false) {
+      final failure = FormatFailure(
+        error: 'File format not supported',
+        stackTrace: StackTrace.current,
+      );
+
+      _logger?.e(
+        '[ERROR] Error compressing image with path: $path',
+        time: DateTime.now(),
+        error: failure,
+        stackTrace: failure.stackTrace,
+      );
+
+      _telemetryOnError?.call(failure);
+
+      return Result.error(
+        failure,
+      );
+    }
+
+    _logger?.d('File is image with path: $path');
+
+    _telemetryOnSuccess?.call();
+
+    return Result.success(
+      null,
+    );
+  }
+
+  Future<Result<String>> _compressImage({
+    required String path,
+    required String fileId,
+  }) async {
+    _logger?.d('Compressing image with id: $fileId');
+
+    try {
+      final cmd = img.Command()
+        ..decodeImageFile(path)
+        ..copyResize(width: 1080)
+        ..writeToFile('$fileId.jpg');
+
+      await cmd.executeThread();
+
+      _logger?.d('Image compressed with id: $fileId');
+
+      _telemetryOnSuccess?.call();
+
+      return Result.success(
+        '$fileId.jpg',
+      );
+    } catch (e, s) {
+      final failure = ImageCompressionFailure(
+        error: e.toString(),
+        stackTrace: s,
+      );
+
+      _logger?.e(
+        '[ERROR] Error compressing image with id: $fileId',
+        time: DateTime.now(),
+        error: failure,
+        stackTrace: failure.stackTrace,
+      );
+
+      return Result.error(
+        failure,
+      );
+    }
+  }
+
+  Future<File> _uploadImage(UploadImageParams params) async {
+    final result = await _storage.createFile(
+      bucketId: params.bucketId,
+      fileId: params.fileId,
+      file: InputFile.fromPath(path: params.path),
+    );
+
+    return result;
+  }
+
   @override
-  Future<Result<String>> createFile(
+  Future<Result<String>> createImage(
       {required String fileId, required String path}) async {
     _logger?.d('Creating file with id: $fileId');
+
+    _logger?.d('Checking if file is image with path: $path');
+
+    final isImageResult = _isImage(path: path);
+
+    if (isImageResult.isError) {
+      return Result.error(
+        (isImageResult as Error<void>).exception,
+      );
+    }
 
     final connectivityResult =
         await _connectivityClient.checkInternetConnection();
@@ -57,15 +157,29 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
     return Result.asyncGuard(
       () async {
-        final result = await _storage.createFile(
-          bucketId: _bucketId,
+        final compressResult = await _compressImage(
+          path: path,
           fileId: fileId,
-          file: InputFile.fromPath(path: path),
+        );
+
+        if (compressResult.isError) {
+          throw (compressResult as Error<String>).exception;
+        }
+
+        final compressPath = (compressResult as Success<String>).value;
+
+        final result = await compute(
+          _uploadImage,
+          UploadImageParams(
+            bucketId: _bucketId,
+            fileId: fileId,
+            path: compressPath,
+          ),
         );
 
         _logger?.d('File created with id: ${result.$id}');
 
-        final url = getFileUrl(fileId: result.$id);
+        final url = getImageUrl(fileId: result.$id);
 
         _logger?.d('File url: $url');
 
@@ -116,7 +230,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  Future<Result<List<String>>> createFiles(
+  Future<Result<List<String>>> createImages(
       {required List<({String fileId, String path})> files}) async {
     _logger?.d('[START] Creating files');
 
@@ -141,7 +255,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
                 file: InputFile.fromPath(path: file.path),
               )
                   .then((value) {
-                return getFileUrl(fileId: value.$id);
+                return getImageUrl(fileId: value.$id);
               })
           ],
           eagerError: true,
@@ -195,7 +309,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  Future<Result<void>> deleteFile({required String fileId}) async {
+  Future<Result<void>> deleteImage({required String fileId}) async {
     _logger?.d('[START] Deleting file with id: $fileId');
 
     final connectivityResult =
@@ -261,7 +375,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  Future<Result<void>> deleteFiles({required List<String> fileIds}) async {
+  Future<Result<void>> deleteImages({required List<String> fileIds}) async {
     _logger?.d('[START] Deleting files');
 
     final connectivityResult =
@@ -333,7 +447,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  String getFilePreviewUrl(
+  String getImagePreviewUrl(
       {required String fileId,
       int? width,
       int? height,
@@ -370,7 +484,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  String getFileUrl({required String fileId}) {
+  String getImageUrl({required String fileId}) {
     _logger?.d('Getting file url for file with id: $fileId');
 
     final url =
@@ -384,7 +498,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  Future<Result<String>> updateFile(
+  Future<Result<String>> updateImage(
       {required String fileId, required String path}) async {
     _logger?.d('[START] Updating file with id: $fileId');
 
@@ -414,7 +528,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
         _telemetryOnSuccess?.call();
 
-        return getFileUrl(fileId: result.$id);
+        return getImageUrl(fileId: result.$id);
       },
       onError: (e, s) {
         late Failure failure;
@@ -459,7 +573,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  Result<String> getFileIdFromUrl({required String url}) {
+  Result<String> getImageIdFromUrl({required String url}) {
     _logger?.d('Getting file id from url: $url');
 
     if (url.contains(_storage.client.endPoint) == false) {

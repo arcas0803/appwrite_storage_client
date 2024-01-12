@@ -62,6 +62,28 @@ final class InvalidUrlFileFailure extends AppwriteStorageFailure {
         );
 }
 
+final class ImageCompressionFailure extends AppwriteStorageFailure {
+  ImageCompressionFailure({
+    required String error,
+    required StackTrace stackTrace,
+  }) : super(
+          message: 'Error compressing image',
+          error: error,
+          stackTrace: stackTrace,
+        );
+}
+
+final class FormatFailure extends AppwriteStorageFailure {
+  FormatFailure({
+    required String error,
+    required StackTrace stackTrace,
+  }) : super(
+          message: 'Error formatting file',
+          error: error,
+          stackTrace: stackTrace,
+        );
+}
+
 final class ServerFailure extends AppwriteStorageFailure {
   ServerFailure({
     required String error,

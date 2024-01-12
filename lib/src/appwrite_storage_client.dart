@@ -14,7 +14,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Future<Result<String>> createFile({
+  Future<Result<String>> createImage({
     required String fileId,
     required String path,
   });
@@ -25,7 +25,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  String getFileUrl({
+  String getImageUrl({
     required String fileId,
   });
 
@@ -43,7 +43,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  String getFilePreviewUrl({
+  String getImagePreviewUrl({
     required String fileId,
     int? width,
     int? height,
@@ -55,7 +55,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Future<Result<void>> deleteFile({
+  Future<Result<void>> deleteImage({
     required String fileId,
   });
 
@@ -69,7 +69,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Future<Result<String>> updateFile({
+  Future<Result<String>> updateImage({
     required String fileId,
     required String path,
   });
@@ -82,7 +82,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Future<Result<List<String>>> createFiles({
+  Future<Result<List<String>>> createImages({
     required List<
             ({
               String fileId,
@@ -100,7 +100,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Future<Result<void>> deleteFiles({
+  Future<Result<void>> deleteImages({
     required List<String> fileIds,
   });
 
@@ -112,7 +112,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Result<String> getFileIdFromUrl({
+  Result<String> getImageIdFromUrl({
     required String url,
   });
 }

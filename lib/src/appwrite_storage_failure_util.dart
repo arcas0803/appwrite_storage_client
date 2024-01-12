@@ -20,6 +20,11 @@ class AppwriteFailureUtil {
         return AppwriteStorageLocalizations.of(context)!.invalidUrlFile;
       case ServerFailure():
         return AppwriteStorageLocalizations.of(context)!.serverFailure;
+      case ImageCompressionFailure():
+        return AppwriteStorageLocalizations.of(context)!.uploadFileFailure;
+
+      case FormatFailure():
+        return AppwriteStorageLocalizations.of(context)!.uploadFileFailure;
     }
   }
 }
