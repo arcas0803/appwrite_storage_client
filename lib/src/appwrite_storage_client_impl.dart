@@ -60,7 +60,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     };
   }
 
-  Future<Result<String>> _compressImage({
+  Future<String> _compressImage({
     required String path,
     required String fileId,
   }) async {
@@ -98,9 +98,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
         _telemetryOnError?.call(failure);
 
-        return Result.error(
-          failure,
-        );
+        return throw failure;
       }
 
       print(io.File(path).lengthSync());
@@ -110,9 +108,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
       _telemetryOnSuccess?.call();
 
-      return Result.success(
-        result.path,
-      );
+      return result.path;
     } catch (e, s) {
       final failure = ImageCompressionFailure(
         error: e.toString(),
@@ -126,9 +122,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         stackTrace: failure.stackTrace,
       );
 
-      return Result.error(
-        failure,
-      );
+      return throw failure;
     }
   }
 
@@ -174,10 +168,6 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
           path: path,
           fileId: fileId,
         );
-
-        if (compressResult.isError) {
-          throw (compressResult as Error<String>).exception;
-        }
 
         final compressPath = (compressResult as Success<String>).value;
 
