@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' as io;
 
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart';
@@ -9,7 +10,7 @@ import 'package:appwrite_storage_client/src/utils.dart';
 import 'package:common_classes/common_classes.dart';
 import 'package:connectivity_client/connectivity_client.dart';
 import 'package:flutter/foundation.dart';
-import 'package:image/image.dart' as img;
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:logger/logger.dart';
 
 /// Implementation of [AppwriteStorageClient] that uses [appwrite] to communicate with
@@ -88,12 +89,36 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     _logger?.d('Compressing image with id: $fileId');
 
     try {
-      final cmd = img.Command()
-        ..decodeImageFile(path)
-        ..copyResize(width: 1080)
-        ..writeToFile('$fileId.jpg');
+      var result = await FlutterImageCompress.compressAndGetFile(
+        path,
+        '$fileId.jpg',
+        quality: 80,
+        minWidth: 1280,
+        minHeight: 720,
+      );
 
-      await cmd.executeThread();
+      if (result == null) {
+        final failure = ImageCompressionFailure(
+          error: 'Error compressing image',
+          stackTrace: StackTrace.current,
+        );
+
+        _logger?.e(
+          '[ERROR] Error compressing image with id: $fileId',
+          time: DateTime.now(),
+          error: failure,
+          stackTrace: failure.stackTrace,
+        );
+
+        _telemetryOnError?.call(failure);
+
+        return Result.error(
+          failure,
+        );
+      }
+
+      print(io.File(path).lengthSync());
+      print(io.File(result.path).lengthSync());
 
       _logger?.d('Image compressed with id: $fileId');
 
