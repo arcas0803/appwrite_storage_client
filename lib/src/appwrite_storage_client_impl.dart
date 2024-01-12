@@ -9,7 +9,6 @@ import 'package:appwrite_storage_client/src/preview_output_format.dart';
 import 'package:appwrite_storage_client/src/utils.dart';
 import 'package:common_classes/common_classes.dart';
 import 'package:connectivity_client/connectivity_client.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:logger/logger.dart';
 
@@ -60,7 +59,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     };
   }
 
-  Future<String> _compressImage({
+  Future<Result<String>> _compressImage({
     required String path,
     required String fileId,
   }) async {
@@ -98,7 +97,9 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
         _telemetryOnError?.call(failure);
 
-        return throw failure;
+        return Result.error(
+          failure,
+        );
       }
 
       print(io.File(path).lengthSync());
@@ -108,7 +109,9 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
       _telemetryOnSuccess?.call();
 
-      return result.path;
+      return Result.success(
+        result.path,
+      );
     } catch (e, s) {
       final failure = ImageCompressionFailure(
         error: e.toString(),
@@ -122,7 +125,9 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         stackTrace: failure.stackTrace,
       );
 
-      return throw failure;
+      return Result.error(
+        failure,
+      );
     }
   }
 
@@ -169,12 +174,17 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
           fileId: fileId,
         );
 
-        final result = await compute(
-          _uploadImage,
+        if (compressResult.isError) {
+          throw (compressResult as Error<String>).exception;
+        }
+
+        final compressPath = (compressResult as Success<String>).value;
+
+        final result = await _uploadImage(
           UploadImageParams(
             bucketId: _bucketId,
             fileId: fileId,
-            path: compressResult,
+            path: compressPath,
           ),
         );
 
