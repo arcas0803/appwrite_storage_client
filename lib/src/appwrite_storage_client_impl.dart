@@ -49,10 +49,13 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   Result<void> _isImage({required String path}) {
     _logger?.d('Checking if file is image with path: $path');
 
+    print(path);
     final extension = (path.split('.')..removeAt(0)).join('.');
+    print(extension);
     final isCompatible = ['jpg', 'jpeg', 'png', 'webp', 'heic']
         .contains(extension.toLowerCase());
 
+    print(isCompatible);
     if (isCompatible == false) {
       final failure = FormatFailure(
         error: 'File format not supported',
