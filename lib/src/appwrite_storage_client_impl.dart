@@ -46,43 +46,18 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         _storage = storage,
         _bucketId = bucketId;
 
-  Result<void> _isImage({required String path}) {
+  bool _isImage({required String path}) {
     _logger?.d('Checking if file is image with path: $path');
 
-    print(path);
-    final extension = (path.split('.')..removeAt(0)).join('.');
-    print(extension);
-    final isCompatible = ['jpg', 'jpeg', 'png', 'webp', 'heic']
-        .contains(extension.toLowerCase());
-
-    print(isCompatible);
-    if (isCompatible == false) {
-      final failure = FormatFailure(
-        error: 'File format not supported',
-        stackTrace: StackTrace.current,
-      );
-
-      _logger?.e(
-        '[ERROR] Error compressing image with path: $path',
-        time: DateTime.now(),
-        error: failure,
-        stackTrace: failure.stackTrace,
-      );
-
-      _telemetryOnError?.call(failure);
-
-      return Result.error(
-        failure,
-      );
-    }
-
-    _logger?.d('File is image with path: $path');
-
-    _telemetryOnSuccess?.call();
-
-    return Result.success(
-      null,
-    );
+    final fileExtension = path.split('.').last.toLowerCase();
+    return switch (fileExtension) {
+      'jpg' => true,
+      'jpeg' => true,
+      'png' => true,
+      'webp' => true,
+      'heic' => true,
+      _ => false,
+    };
   }
 
   Future<Result<String>> _compressImage({
@@ -166,11 +141,13 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
     _logger?.d('Checking if file is image with path: $path');
 
-    final isImageResult = _isImage(path: path);
-
-    if (isImageResult.isError) {
+    if (!_isImage(path: path)) {
       return Result.error(
-        (isImageResult as Error<void>).exception,
+        FormatFailure(
+          error:
+              'File is not an image. Only jpg, jpeg, png, webp and heic are supported. The file has an extension of ${path.split('.').last}',
+          stackTrace: StackTrace.current,
+        ),
       );
     }
 
