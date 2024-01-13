@@ -70,7 +70,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       List<String> pathSegments = path.split('/');
 
       // Reemplaza el último elemento (nombre del archivo original) con el nuevo nombre del archivo
-      pathSegments[pathSegments.length - 1] = '$fileId.jpg';
+      pathSegments[pathSegments.length - 1] = '$fileId.webp';
 
       // Une los segmentos de la ruta de nuevo en una sola cadena
       String newPath = pathSegments.join('/');
