@@ -78,8 +78,10 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       var result = await FlutterImageCompress.compressAndGetFile(
         path,
         newPath,
-        quality: 80,
-        format: CompressFormat.jpeg,
+        minHeight: 1920,
+        minWidth: 1080,
+        quality: 70,
+        format: CompressFormat.webp,
       );
 
       if (result == null) {
@@ -102,10 +104,9 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         );
       }
 
-      print(io.File(path).lengthSync());
-      print(io.File(result.path).lengthSync());
-
       _logger?.d('Image compressed with id: $fileId');
+      _logger?.d('Original image size: ${io.File(path).lengthSync()}');
+      _logger?.d('Compressed image size: ${io.File(result.path).lengthSync()}');
 
       _telemetryOnSuccess?.call();
 
