@@ -8,7 +8,7 @@ import 'package:appwrite_storage_client/src/appwrite_storage_failure.dart';
 import 'package:appwrite_storage_client/src/preview_output_format.dart';
 import 'package:common_classes/common_classes.dart';
 import 'package:connectivity_client/connectivity_client.dart';
-import 'package:flutter_avif/flutter_avif.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:logger/logger.dart';
 
 /// Implementation of [AppwriteStorageClient] that uses [appwrite] to communicate with
@@ -77,18 +77,11 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       List<String> pathSegments = path.split('/');
 
       // Reemplaza el último elemento (nombre del archivo original) con el nuevo nombre del archivo
-      pathSegments[pathSegments.length - 1] = '$fileId.avif';
+      pathSegments[pathSegments.length - 1] = '$fileId.webp';
 
       // Une los segmentos de la ruta de nuevo en una sola cadena
       String newPath = pathSegments.join('/');
 
-      final inputFile = io.File(path);
-      final inputBytes = await inputFile.readAsBytes();
-      final avifBytes = await encodeAvif(inputBytes);
-      final outputFile = io.File(newPath);
-      await outputFile.writeAsBytes(avifBytes);
-
-      /*
       var result = await FlutterImageCompress.compressAndGetFile(
         path,
         newPath,
@@ -116,16 +109,16 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         return Result.error(
           failure,
         );
-      }*/
+      }
 
       _logger?.i('Image compressed with id: $fileId');
       _logger?.i('Original image size: ${io.File(path).lengthSync()}');
-      _logger?.i('Compressed image size: ${io.File(newPath).lengthSync()}');
+      _logger?.i('Compressed image size: ${io.File(result.path).lengthSync()}');
 
       _telemetryOnSuccess?.call();
 
       return Result.success(
-        newPath,
+        result.path,
       );
     } catch (e, s) {
       final failure = ImageCompressionFailure(
