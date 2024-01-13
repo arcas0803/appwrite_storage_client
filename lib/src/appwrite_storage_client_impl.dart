@@ -6,7 +6,6 @@ import 'package:appwrite/models.dart';
 import 'package:appwrite_storage_client/src/appwrite_storage_client.dart';
 import 'package:appwrite_storage_client/src/appwrite_storage_failure.dart';
 import 'package:appwrite_storage_client/src/preview_output_format.dart';
-import 'package:appwrite_storage_client/src/utils.dart';
 import 'package:common_classes/common_classes.dart';
 import 'package:connectivity_client/connectivity_client.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -44,9 +43,11 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         _telemetryOnSuccess = telemetryOnSuccess,
         _storage = storage,
         _bucketId = bucketId;
-
+  // Check if file is an image
+  //
+  // Returns true if the file is an image and false if not
   bool _isImage({required String path}) {
-    _logger?.d('Checking if file is image with path: $path');
+    _logger?.i('Checking if file is image with path: $path');
 
     final fileExtension = path.split('.').last.toLowerCase();
     return switch (fileExtension) {
@@ -59,11 +60,17 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     };
   }
 
+  // Compress an image using [FlutterImageCompress]
+  //
+  // Returns a [Result] with the path of the compressed image
+  //
+  // Throws an [ImageCompressionFailure] if the image can't be compressed
+  //
   Future<Result<String>> _compressImage({
     required String path,
     required String fileId,
   }) async {
-    _logger?.d('Compressing image with id: $fileId');
+    _logger?.i('Compressing image with id: $fileId');
 
     try {
       // Divide la ruta original en directorios
@@ -104,9 +111,9 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         );
       }
 
-      _logger?.d('Image compressed with id: $fileId');
-      _logger?.d('Original image size: ${io.File(path).lengthSync()}');
-      _logger?.d('Compressed image size: ${io.File(result.path).lengthSync()}');
+      _logger?.i('Image compressed with id: $fileId');
+      _logger?.i('Original image size: ${io.File(path).lengthSync()}');
+      _logger?.i('Compressed image size: ${io.File(result.path).lengthSync()}');
 
       _telemetryOnSuccess?.call();
 
@@ -132,11 +139,45 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     }
   }
 
-  Future<File> _uploadImage(UploadImageParams params) async {
+  Future<File> _uploadImage({
+    required String fileId,
+    required String path,
+  }) async {
+    final isImage = _isImage(path: path);
+
+    if (!isImage) {
+      throw FormatException(
+        'File is not an image. Only jpg, jpeg, png, webp and heic are supported. The file has an extension of ${path.split('.').last}',
+      );
+    }
+
+    final compressResult = await _compressImage(
+      path: path,
+      fileId: fileId,
+    );
+
+    late String finalPath;
+
+    if (compressResult.isError) {
+      finalPath = path;
+    } else {
+      finalPath = (compressResult as Success<String>).value;
+    }
+
+    _logger?.i('''
+    Uploading image:
+      - File id: $fileId
+      - Path: $finalPath
+      - Bucket id: $_bucketId
+      - Size: ${io.File(finalPath).lengthSync()}
+    ''');
+
     final result = await _storage.createFile(
-      bucketId: params.bucketId,
-      fileId: params.fileId,
-      file: InputFile.fromPath(path: params.path),
+      bucketId: _bucketId,
+      fileId: fileId,
+      file: InputFile.fromPath(
+        path: finalPath,
+      ),
     );
 
     return result;
@@ -145,19 +186,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   @override
   Future<Result<String>> createImage(
       {required String fileId, required String path}) async {
-    _logger?.d('Creating file with id: $fileId');
-
-    _logger?.d('Checking if file is image with path: $path');
-
-    if (!_isImage(path: path)) {
-      return Result.error(
-        FormatFailure(
-          error:
-              'File is not an image. Only jpg, jpeg, png, webp and heic are supported. The file has an extension of ${path.split('.').last}',
-          stackTrace: StackTrace.current,
-        ),
-      );
-    }
+    _logger?.i('Creating file with id: $fileId');
 
     final connectivityResult =
         await _connectivityClient.checkInternetConnection();
@@ -170,30 +199,16 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
     return Result.asyncGuard(
       () async {
-        final compressResult = await _compressImage(
-          path: path,
-          fileId: fileId,
-        );
-
-        if (compressResult.isError) {
-          throw (compressResult as Error<String>).exception;
-        }
-
-        final compressPath = (compressResult as Success<String>).value;
-
         final result = await _uploadImage(
-          UploadImageParams(
-            bucketId: _bucketId,
-            fileId: fileId,
-            path: compressPath,
-          ),
+          fileId: fileId,
+          path: path,
         );
 
-        _logger?.d('File created with id: ${result.$id}');
+        _logger?.i('File created with id: ${result.$id}');
 
         final url = getImageUrl(fileId: result.$id);
 
-        _logger?.d('File url: $url');
+        _logger?.i('File url: $url');
 
         _telemetryOnSuccess?.call();
 
@@ -244,7 +259,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   @override
   Future<Result<List<String>>> createImages(
       {required List<({String fileId, String path})> files}) async {
-    _logger?.d('[START] Creating files');
+    _logger?.i('[START] Creating files');
 
     final connectivityResult =
         await _connectivityClient.checkInternetConnection();
@@ -260,19 +275,18 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         final result = await Future.wait(
           [
             for (final file in files)
-              _storage
-                  .createFile(
-                bucketId: _bucketId,
+              _uploadImage(
                 fileId: file.fileId,
-                file: InputFile.fromPath(path: file.path),
+                path: file.path,
+              ).then(
+                (value) {
+                  return getImageUrl(fileId: value.$id);
+                },
               )
-                  .then((value) {
-                return getImageUrl(fileId: value.$id);
-              })
           ],
           eagerError: true,
         );
-        _logger?.d('[SUCESS] Files created');
+        _logger?.i('[SUCESS] Files created');
 
         _telemetryOnSuccess?.call();
 
@@ -322,7 +336,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
   @override
   Future<Result<void>> deleteImage({required String fileId}) async {
-    _logger?.d('[START] Deleting file with id: $fileId');
+    _logger?.i('[START] Deleting file with id: $fileId');
 
     final connectivityResult =
         await _connectivityClient.checkInternetConnection();
@@ -340,7 +354,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
           bucketId: _bucketId,
         );
 
-        _logger?.d('[SUCESS] File deleted with id: $fileId');
+        _logger?.i('[SUCESS] File deleted with id: $fileId');
 
         _telemetryOnSuccess?.call();
       },
@@ -388,7 +402,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
   @override
   Future<Result<void>> deleteImages({required List<String> fileIds}) async {
-    _logger?.d('[START] Deleting files');
+    _logger?.i('[START] Deleting files');
 
     final connectivityResult =
         await _connectivityClient.checkInternetConnection();
@@ -412,7 +426,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
           eagerError: true,
         );
 
-        _logger?.d('[SUCESS] Files deleted');
+        _logger?.i('[SUCESS] Files deleted');
 
         _telemetryOnSuccess?.call();
       },
@@ -465,7 +479,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       int? height,
       int? quality,
       PreviewOutputFormat? format}) {
-    _logger?.d('Getting file preview url for file with id: $fileId');
+    _logger?.i('Getting file preview url for file with id: $fileId');
 
     final queries = <String>[];
 
@@ -488,7 +502,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     final url =
         '${_storage.client.endPoint}/storage/buckets/$_bucketId/files/$fileId/preview?${queries.join('&')}';
 
-    _logger?.d('File preview url: $url');
+    _logger?.i('File preview url: $url');
 
     _telemetryOnSuccess?.call();
 
@@ -497,12 +511,12 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
   @override
   String getImageUrl({required String fileId}) {
-    _logger?.d('Getting file url for file with id: $fileId');
+    _logger?.i('Getting file url for file with id: $fileId');
 
     final url =
-        '${_storage.client.endPoint}/storage/buckets/$_bucketId/files/$fileId';
+        '${_storage.client.endPoint}/storage/buckets/$_bucketId/files/$fileId/view?project=${_storage.client.config['project']}}';
 
-    _logger?.d('File url: $url');
+    _logger?.i('File url: $url');
 
     _telemetryOnSuccess?.call();
 
@@ -512,7 +526,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   @override
   Future<Result<String>> updateImage(
       {required String fileId, required String path}) async {
-    _logger?.d('[START] Updating file with id: $fileId');
+    _logger?.i('[START] Updating file with id: $fileId');
 
     final connectivityResult =
         await _connectivityClient.checkInternetConnection();
@@ -530,13 +544,12 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
           bucketId: _bucketId,
         );
 
-        final result = await _storage.createFile(
-          bucketId: _bucketId,
+        final result = await _uploadImage(
           fileId: fileId,
-          file: InputFile.fromPath(path: path),
+          path: path,
         );
 
-        _logger?.d('[SUCESS] File updated with id: ${result.$id}');
+        _logger?.i('[SUCESS] File updated with id: ${result.$id}');
 
         _telemetryOnSuccess?.call();
 
@@ -586,7 +599,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
   @override
   Result<String> getImageIdFromUrl({required String url}) {
-    _logger?.d('Getting file id from url: $url');
+    _logger?.i('Getting file id from url: $url');
 
     if (url.contains(_storage.client.endPoint) == false) {
       final failure = InvalidUrlFileFailure(
@@ -629,7 +642,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       );
     }
 
-    _logger?.d('File id: ${pathSegments[3]}');
+    _logger?.i('File id: ${pathSegments[3]}');
 
     _telemetryOnSuccess?.call();
 
