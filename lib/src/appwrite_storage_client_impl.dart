@@ -183,6 +183,17 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
     return result;
   }
 
+  Future<void> _deleteImage({required String fileId}) async {
+    _logger?.i('Deleting image with id: $fileId');
+
+    await _storage.deleteFile(
+      fileId: fileId,
+      bucketId: _bucketId,
+    );
+
+    _logger?.i('Image deleted with id: $fileId');
+  }
+
   @override
   Future<Result<String>> createImage(
       {required String fileId, required String path}) async {
@@ -349,9 +360,8 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
     return Result.asyncGuard(
       () async {
-        await _storage.deleteFile(
+        await _deleteImage(
           fileId: fileId,
-          bucketId: _bucketId,
         );
 
         _logger?.i('[SUCESS] File deleted with id: $fileId');
@@ -418,9 +428,8 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         await Future.wait(
           [
             for (final fileId in fileIds)
-              _storage.deleteFile(
+              _deleteImage(
                 fileId: fileId,
-                bucketId: _bucketId,
               )
           ],
           eagerError: true,
