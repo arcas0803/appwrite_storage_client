@@ -112,7 +112,7 @@ abstract class AppwriteStorageClient {
   ///
   /// On Failure, returns an [AppwriteStorageFailure].
   ///
-  Result<String> getImageIdFromUrl({
+  String getImageIdFromUrl({
     required String url,
   });
 }

@@ -598,7 +598,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
   }
 
   @override
-  Result<String> getImageIdFromUrl({required String url}) {
+  String getImageIdFromUrl({required String url}) {
     _logger?.i('Getting file id from url: $url');
 
     if (url.contains(_storage.client.endPoint) == false) {
@@ -615,7 +615,7 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
       );
       _telemetryOnError?.call(failure);
 
-      return Result.error(failure);
+      return '';
     }
 
     final uri = Uri.parse(url);
@@ -637,17 +637,13 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
 
       _telemetryOnError?.call(failure);
 
-      return Result.error(
-        failure,
-      );
+      return '';
     }
 
     _logger?.i('File id: ${pathSegments[3]}');
 
     _telemetryOnSuccess?.call();
 
-    return Result.success(
-      pathSegments[3],
-    );
+    return pathSegments[3];
   }
 }
