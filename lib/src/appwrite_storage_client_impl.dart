@@ -438,6 +438,8 @@ class AppwriteStorageClientImpl implements AppwriteStorageClient {
         _logger?.i('[SUCESS] Files deleted');
 
         _telemetryOnSuccess?.call();
+
+        return;
       },
       onError: (e, s) {
         late Failure failure;

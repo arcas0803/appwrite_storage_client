@@ -26,7 +26,6 @@ dependencies:
   
   intl: ^0.18.1
   logger: ^2.0.2+1
-  url_launcher: ^6.2.2
   uuid: ^4.2.0
   
 
